@@ -4,14 +4,14 @@ import { expect } from "vitest";
 const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;
 
-export function creditBurn(
+export function burn(
   amountExpected: number,
   sender: any,
   disp: boolean = false
   ){
   const test = simnet.callPublicFn(
     "credit",
-    "credit-burn",
+    "burn",
     [Cl.uint(amountExpected)],
     sender
   );
@@ -56,14 +56,14 @@ export function creditBurn(
   return Number(amountExpected);
 }
 
-export function creditMint(
+export function mint(
   amountExpected: number,
   sender: any,
   disp: boolean = false
   ){
   const test = simnet.callPublicFn(
     "credit",
-    "credit-mint",
+    "mint",
     [Cl.uint(amountExpected)],
     sender
   );

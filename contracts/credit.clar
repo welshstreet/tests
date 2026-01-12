@@ -20,7 +20,7 @@
 (define-data-var contract-owner principal tx-sender)
 (define-data-var token-uri (optional (string-utf8 256)) (some u"https://gateway.lighthouse.storage/ipfs/bafkreia3r5yfzb3r4ixfzw35s76ktvjuf6v4zhug76ck2bgd5ypyx2faea"))
 
-(define-public (credit-burn (amount uint))
+(define-public (burn (amount uint))
     (begin
       (asserts! (> amount u0) ERR_ZERO_AMOUNT)
       (asserts! (is-eq contract-caller .exchange) ERR_NOT_AUTHORIZED)
@@ -29,7 +29,7 @@
     )
 )
 
-(define-public (credit-mint (amount uint))
+(define-public (mint (amount uint))
     (begin
       (asserts! (> amount u0) ERR_ZERO_AMOUNT)
       (asserts! (is-eq contract-caller .exchange) ERR_NOT_AUTHORIZED)
