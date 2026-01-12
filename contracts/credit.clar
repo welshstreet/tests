@@ -13,7 +13,7 @@
 
 ;; metadata
 (define-constant TOKEN_DECIMALS u6)
-(define-constant TOKEN_NAME "Credit")
+(define-constant TOKEN_NAME "Street Credit")
 (define-constant TOKEN_SYMBOL "CREDIT")
 
 ;; variables

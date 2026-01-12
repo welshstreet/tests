@@ -20,7 +20,7 @@
 (define-constant EMISSION_INTERVAL u1)
 (define-constant MINT_CAP u5000000000000000)
 (define-constant TOKEN_DECIMALS u6)
-(define-constant TOKEN_NAME "Street")
+(define-constant TOKEN_NAME "Welsh Street")
 (define-constant TOKEN_SYMBOL "STREET")
 (define-constant TOKEN_SUPPLY u10000000000000000)
 
