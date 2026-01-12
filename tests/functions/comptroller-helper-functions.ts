@@ -17,7 +17,7 @@ export function transferCredit(
     }
     
     const test = simnet.callPublicFn(
-        "comptroller",
+        "controller",
         "transfer-credit",
         [
             Cl.uint(amount),

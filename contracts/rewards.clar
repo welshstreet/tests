@@ -325,7 +325,7 @@
     (info (map-get? user-rewards { account: recipient }))
   )
     (begin
-      (asserts! (is-eq contract-caller .comptroller) ERR_NOT_AUTHORIZED)
+      (asserts! (is-eq contract-caller .controller) ERR_NOT_AUTHORIZED)
       (asserts! (> transfer-amount u0) ERR_ZERO_AMOUNT)
       (if (is-some info)
         (let (
@@ -518,7 +518,7 @@
     (other-lp (- total-lp old-balance))
   )
     (begin
-      (asserts! (is-eq contract-caller .comptroller) ERR_NOT_AUTHORIZED)
+      (asserts! (is-eq contract-caller .controller) ERR_NOT_AUTHORIZED)
       (asserts! (> transfer-amount u0) ERR_ZERO_AMOUNT)
       (let (
         (index-a (get index-a info))

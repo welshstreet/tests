@@ -64,7 +64,7 @@
   (begin
     (asserts! (> amount u0) ERR_ZERO_AMOUNT)
     (asserts! (or (is-eq contract-caller .exchange) 
-                  (is-eq contract-caller .comptroller)) ERR_NOT_AUTHORIZED)
+                  (is-eq contract-caller .controller)) ERR_NOT_AUTHORIZED)
     (try! (ft-transfer? credit amount sender recipient))
     (match memo
       memo-content (print memo-content)

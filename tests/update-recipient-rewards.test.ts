@@ -11,7 +11,7 @@ describe("=== UPDATE RECIPIENT REWARDS TESTS ===", () => {
     it("=== UPDATE RECIPIENT REWARDS PASS ===", () => {
         if (disp) {
             console.log("✅ UPDATE RECIPIENT REWARDS: Success scenarios tested through credit transfer integration");
-            console.log("   - transfer-credit → update-recipient-rewards (as-contract call from .comptroller)");
+            console.log("   - transfer-credit → update-recipient-rewards (as-contract call from .controller)");
         }
     });
 

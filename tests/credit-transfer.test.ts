@@ -3,7 +3,7 @@ import { disp, DONATE_WELSH, DONATE_STREET, PRECISION } from "./vitestconfig";
 import { setupRewards } from "./functions/setup-helper-functions";
 import { getRewardUserInfo, getRewardPoolInfo, donateRewards, claimRewards } from "./functions/rewards-helper-functions";
 import { getBalance } from "./functions/shared-read-only-helper-functions";
-import { transferCredit } from "./functions/comptroller-helper-functions";
+import { transferCredit } from "./functions/controller-helper-functions";
 
 const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;
@@ -80,7 +80,7 @@ describe("=== CREDIT TRANSFER TESTS ===", () => {
             disp
         );
 
-        // STEP 5: Transfer ALL CREDIT tokens from wallet1 to wallet2 using comptroller
+        // STEP 5: Transfer ALL CREDIT tokens from wallet1 to wallet2 using controller
         const transferAmount = wallet1InitialBalance
         transferCredit(
             transferAmount,
@@ -229,7 +229,7 @@ describe("=== CREDIT TRANSFER TESTS ===", () => {
             disp
         );
 
-        // STEP 5: Transfer ALL CREDIT tokens from wallet1 to wallet3 using comptroller
+        // STEP 5: Transfer ALL CREDIT tokens from wallet1 to wallet3 using controller
         const transferAmount = wallet1InitialBalance;
         transferCredit(
             transferAmount,
@@ -376,7 +376,7 @@ describe("=== CREDIT TRANSFER TESTS ===", () => {
             disp
         );
 
-        // STEP 5: Transfer 10% of CREDIT tokens from wallet1 to wallet2 using comptroller
+        // STEP 5: Transfer 10% of CREDIT tokens from wallet1 to wallet2 using controller
         const transferAmount = Math.floor(wallet1InitialBalance * 0.1); // 10% of tokens
         transferCredit(
             transferAmount,

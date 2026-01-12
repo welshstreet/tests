@@ -1,4 +1,4 @@
-;; Welsh Street Comptroller
+;; Welsh Street Controller
 
 ;; errors
 (define-constant ERR_ZERO_AMOUNT (err u500))
