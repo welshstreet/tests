@@ -1,0 +1,56 @@
+[project]
+name = 'welsh-street'
+description = ''
+authors = []
+telemetry = true
+cache_dir = './.cache'
+
+[[project.requirements]]
+contract_id = 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard'
+
+[contracts.comptroller]
+path = 'contracts/comptroller.clar'
+clarity_version = 3
+epoch = '3.1'
+
+[contracts.credit]
+path = 'contracts/credit.clar'
+clarity_version = 3
+epoch = '3.1'
+
+[contracts.exchange]
+path = 'contracts/exchange.clar'
+clarity_version = 3
+epoch = '3.1'
+
+[contracts.genesis]
+path = 'contracts/genesis.clar'
+clarity_version = 3
+epoch = '3.1'
+
+[contracts.rewards]
+path = 'contracts/rewards.clar'
+clarity_version = 3
+epoch = '3.1'
+
+[contracts.street]
+path = 'contracts/street.clar'
+clarity_version = 3
+epoch = '3.1'
+
+[contracts.welshcorgicoin]
+path = 'contracts/welshcorgicoin.clar'
+clarity_version = 3
+epoch = '3.1'
+[repl.analysis]
+passes = ['check_checker']
+
+[repl.analysis.check_checker]
+strict = false
+trusted_sender = false
+trusted_caller = false
+callee_filter = false
+
+[repl.remote_data]
+enabled = false
+api_url = 'https://api.hiro.so'
