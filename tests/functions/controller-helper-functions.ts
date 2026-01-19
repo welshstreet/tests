@@ -9,20 +9,27 @@ export function transferCredit(
     sender: string,
     recipient: string,
     caller: any,
+    memo?: Uint8Array,
     disp: boolean = false
 ) {
     if (disp) {
         console.log(`\n=== transferCredit: ${amount} from ${sender} to ${recipient} ===`);
         console.log(`Caller: ${caller}`);
+        if (memo) {
+            console.log(`Memo: ${new TextDecoder().decode(memo)}`);
+        }
     }
+    
+    const memoArg = memo ? Cl.some(Cl.bufferFromUtf8(new TextDecoder().decode(memo))) : Cl.none();
     
     const test = simnet.callPublicFn(
         "controller",
-        "transfer-credit",
+        "transfer",
         [
             Cl.uint(amount),
             Cl.principal(sender),
-            Cl.principal(recipient)
+            Cl.principal(recipient),
+            memoArg
         ],
         caller
     );
@@ -31,20 +38,20 @@ export function transferCredit(
         console.log(`Result type: ${test.result.type}`);
     }
     
-    // Check zero amount (ERR_ZERO_AMOUNT - 900)
+    // Check zero amount (ERR_ZERO_AMOUNT - u500)
     if (amount <= 0) {
-        expect(test.result).toEqual(Cl.error(Cl.uint(900)));
+        expect(test.result).toEqual(Cl.error(Cl.uint(500)));
         if (disp) {
-            console.log(`☑️ Zero amount: Expected ERR_ZERO_AMOUNT (900)`);
+            console.log(`☑️ Zero amount: Expected ERR_ZERO_AMOUNT (500)`);
         }
         return false;
     }
     
-    // Check token ownership (ERR_NOT_TOKEN_OWNER - 901)
+    // Check token ownership (ERR_NOT_TOKEN_OWNER - u502)
     if (caller !== sender) {
-        expect(test.result).toEqual(Cl.error(Cl.uint(901)));
+        expect(test.result).toEqual(Cl.error(Cl.uint(502)));
         if (disp) {
-            console.log(`☑️ Not token owner: Expected ERR_NOT_TOKEN_OWNER (901)`);
+            console.log(`☑️ Not token owner: Expected ERR_NOT_TOKEN_OWNER (502)`);
         }
         return false;
     }
@@ -60,8 +67,10 @@ export function transferCredit(
         return false;
     }
     
-    // Success case - expect (ok true)
-    expect(test.result).toEqual(Cl.ok(Cl.bool(true)));
+    // Success case - expect (ok { amount-lp: amount })
+    expect(test.result).toEqual(Cl.ok(Cl.tuple({
+        'amount-lp': Cl.uint(amount)
+    })));
     
     if (disp && test.result.type === 'ok') {
         console.log(`✅ Credit transfer successful: ${amount} from ${sender} to ${recipient}`);

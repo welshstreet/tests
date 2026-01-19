@@ -36,7 +36,7 @@ export function burnLiquidity(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "burned-lp": Cl.uint(burnedLpExpected),
+                "amount-lp": Cl.uint(burnedLpExpected),
             })
         )
     );
@@ -82,8 +82,8 @@ export function lockLiquidity(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "locked-a": Cl.uint(lockedAExpected),
-                "locked-b": Cl.uint(lockedBExpected),
+                "amount-a": Cl.uint(lockedAExpected),
+                "amount-b": Cl.uint(lockedBExpected),
             })
         )
     );
@@ -93,8 +93,8 @@ export function lockLiquidity(
         console.log("lock-liquidity result:");
 
         const resultValue = (test.result as any).value.value;
-        console.log(`  locked-a: ${Number(resultValue['locked-a'].value)}`);
-        console.log(`  locked-b: ${Number(resultValue['locked-b'].value)}`);
+        console.log(`  amount-a: ${Number(resultValue['amount-a'].value)}`);
+        console.log(`  amount-b: ${Number(resultValue['amount-b'].value)}`);
     }
 
     return {lockedAExpected, lockedBExpected};
@@ -150,9 +150,9 @@ export function provideInitialLiquidity(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "added-a": Cl.uint(addedAExpected),
-                "added-b": Cl.uint(addedBExpected),
-                "minted-lp": Cl.uint(BigInt(mintedLpExpected)),
+                "amount-a": Cl.uint(addedAExpected),
+                "amount-b": Cl.uint(addedBExpected),
+                "amount-lp": Cl.uint(BigInt(mintedLpExpected)),
             })
         )
     );
@@ -205,9 +205,9 @@ export function provideLiquidity(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "added-a": Cl.uint(addedAExpected),
-                "added-b": Cl.uint(addedBExpected),
-                "minted-lp": Cl.uint(mintedLpExpected),
+                "amount-a": Cl.uint(addedAExpected),
+                "amount-b": Cl.uint(addedBExpected),
+                "amount-lp": Cl.uint(mintedLpExpected),
             })
         )
     );
@@ -217,9 +217,9 @@ export function provideLiquidity(
         console.log("provide-liquidity result:");
 
         const resultValue = (test.result as any).value.value;
-        console.log(`  added-a: ${Number(resultValue['added-a'].value)}`);
-        console.log(`  added-b: ${Number(resultValue['added-b'].value)}`);
-        console.log(`  minted-lp: ${Number(resultValue['minted-lp'].value)}`);
+        console.log(`  amount-a: ${Number(resultValue['amount-a'].value)}`);
+        console.log(`  amount-b: ${Number(resultValue['amount-b'].value)}`);
+        console.log(`  amount-lp: ${Number(resultValue['amount-lp'].value)}`);
     }
 
     return mintedLpExpected;
@@ -255,11 +255,11 @@ export function removeLiquidity(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "burned-lp": Cl.uint(burnedLpExpected),
+                "amount-a": Cl.uint(userAExpected),
+                "amount-b": Cl.uint(userBExpected),
+                "amount-lp": Cl.uint(burnedLpExpected),
                 "tax-a": Cl.uint(taxAExpected),
                 "tax-b": Cl.uint(taxBExpected),
-                "user-a": Cl.uint(userAExpected),
-                "user-b": Cl.uint(userBExpected),
             })
         )
     );
@@ -268,20 +268,20 @@ export function removeLiquidity(
         console.log(`✅ Remove liquidity successful: ${amountLp} LP → ${userAExpected} WELSH + ${userBExpected} STREET (tax: ${taxAExpected} WELSH + ${taxBExpected} STREET)`);
         const result = (test.result as any).value.value;
         console.log(`remove-liquidity result:`);
-        console.log(`  burned-lp: ${result['burned-lp'].value}`);
+        console.log(`  amount-a: ${result['amount-a'].value}`);
+        console.log(`  amount-b: ${result['amount-b'].value}`);
+        console.log(`  amount-lp: ${result['amount-lp'].value}`);
         console.log(`  tax-a: ${result['tax-a'].value}`);
         console.log(`  tax-b: ${result['tax-b'].value}`);
-        console.log(`  user-a: ${result['user-a'].value}`);
-        console.log(`  user-b: ${result['user-b'].value}`);
     }
 
     return burnedLpExpected;
 }
 
 export function swapAB(
-    amountA: number,
-    amountInExpected: number,
-    amountOutExpected: number,
+    amountA: number,              // Input: Welsh amount (always A)
+    amountAExpected: number,      // Expected Welsh amount returned (input amount)
+    amountBExpected: number,      // Expected Street amount returned (output amount - net after fees)
     feeAExpected: number,
     resAExpected: number,
     resANewExpected: number,
@@ -318,8 +318,8 @@ export function swapAB(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "amount-in": Cl.uint(amountInExpected),
-                "amount-out": Cl.uint(amountOutExpected),
+                "amount-a": Cl.uint(amountAExpected),     // Welsh amount (input)
+                "amount-b": Cl.uint(amountBExpected),     // Street amount (output - net)
                 "fee-a": Cl.uint(feeAExpected),
                 "res-a": Cl.uint(resAExpected),
                 "res-a-new": Cl.uint(resANewExpected),
@@ -331,18 +331,18 @@ export function swapAB(
     );
 
     if (disp && test.result.type === 'ok') {
-        console.log(`✅ Swap A-B successful: ${amountA} WELSH → ${amountOutExpected} STREET`);
+        console.log(`✅ Swap A-B successful: ${amountA} WELSH → ${amountBExpected} STREET`);
         console.log(`  Fee A: ${feeAExpected}, Revenue A: ${revAExpected}`);
         console.log(`  Reserves: A ${resAExpected} → ${resANewExpected}, B ${resBExpected} → ${resBNewExpected}`);
     }
 
-    return amountOutExpected;
+    return amountBExpected; // Return net Street amount received
 }
 
 export function swapBA(
-    amountB: number,
-    amountInExpected: number,
-    amountOutExpected: number,
+    amountB: number,              // Input: Street amount (always B)
+    amountAExpected: number,      // Expected Welsh amount returned (output amount - net after fees)
+    amountBExpected: number,      // Expected Street amount returned (input amount)
     feeBExpected: number,
     resAExpected: number,
     resANewExpected: number,
@@ -379,8 +379,8 @@ export function swapBA(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "amount-in": Cl.uint(amountInExpected),
-                "amount-out": Cl.uint(amountOutExpected),
+                "amount-a": Cl.uint(amountAExpected),     // Welsh amount (output - net)
+                "amount-b": Cl.uint(amountBExpected),     // Street amount (input)
                 "fee-b": Cl.uint(feeBExpected),
                 "res-a": Cl.uint(resAExpected),
                 "res-a-new": Cl.uint(resANewExpected),
@@ -392,11 +392,11 @@ export function swapBA(
     );
 
     if (disp && test.result.type === 'ok') {
-        console.log(`✅ Swap B-A successful: ${amountB} STREET → ${amountOutExpected} WELSH`);
+        console.log(`✅ Swap B-A successful: ${amountB} STREET → ${amountAExpected} WELSH`);
         console.log(`  Fee B: ${feeBExpected}, Revenue B: ${revBExpected}`);
         console.log(`  Reserves: A ${resAExpected} → ${resANewExpected}, B ${resBExpected} → ${resBNewExpected}`);
     }
-    return amountOutExpected;
+    return amountAExpected; // Return net Welsh amount received
 }
 
 export function setExchangeFee(

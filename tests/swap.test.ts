@@ -31,8 +31,8 @@ describe("=== SWAP TESTS ===", () => {
 
         swapAB(
             amountA,
-            amountA,        // amount-in
-            amountOut,      // amount-out
+            amountA,        // amount-a (Welsh input)
+            amountOut,      // amount-b (Street output - net)
             feeAExpected,   // fee-a
             resA,           // res-a (initial)
             resANew,        // res-a-new
@@ -67,8 +67,8 @@ describe("=== SWAP TESTS ===", () => {
 
         swapBA(
             amountB,
-            amountB,        // amount-in
-            amountOut,      // amount-out
+            amountOut,      // amount-a (Welsh output - net)
+            amountB,        // amount-b (Street input)
             feeBExpected,   // fee-b
             resA,           // res-a (initial)
             resANew,        // res-a-new
@@ -141,8 +141,8 @@ describe("=== SWAP TESTS ===", () => {
         // Execute the swap following the working pattern from swap.test.ts
         swapBA(
             extremeSwapB,        // amountB input
-            extremeSwapB,        // amountInExpected
-            amountOutA,          // amountOutExpected
+            amountOutA,          // amount-a (Welsh output - net)
+            extremeSwapB,        // amount-b (Street input)
             feeBExpected,        // feeBExpected
             currentReserveA,     // resAExpected (OLD reserves)
             newReserveA,         // resANewExpected (NEW reserves)
@@ -184,17 +184,6 @@ describe("=== SWAP TESTS ===", () => {
             deployer,
             disp
         );
-
-        console.log("Available Ratios After Swap:");
-        console.log(`Available A: ${expectedAvailA}, Total A: ${newReserveA}, Ratio: ${(expectedAvailA / (newReserveA + newReserveB)).toFixed(6)}`);
-        console.log(`Available B: ${expectedAvailB}, Total B: ${newReserveB}, Ratio: ${(expectedAvailB / (newReserveA + newReserveB)).toFixed(6)}`);
-        console.log("Locked Ratios After Swap:");
-        console.log(`Locked A: ${expectedLockedA}, Total A: ${newReserveA}, Ratio: ${(expectedLockedA / (newReserveA + newReserveB)).toFixed(6)}`);
-        console.log(`Locked B: ${expectedLockedB}, Total B: ${newReserveB}, Ratio: ${(expectedLockedB / (newReserveA + newReserveB)).toFixed(6)}`);
-        console.log("Reserve Ratios After Swap:");
-        console.log(`Reserve A: ${newReserveA}, Ratio: ${(newReserveA / (newReserveA + newReserveB)).toFixed(6)}`);
-        console.log(`Reserve B: ${newReserveB}, Ratio: ${(newReserveB / (newReserveA + newReserveB)).toFixed(6)}`);
-        // Test passes if getExchangeInfo doesn't throw - meaning proportional fix worked correctly
     });
 
     it("=== ERR_ZERO_AMOUNT - SWAP-A-B ===", () => {
@@ -202,8 +191,8 @@ describe("=== SWAP TESTS ===", () => {
         
         swapAB(
             0,              // Zero amount A should trigger ERR_ZERO_AMOUNT
-            0,              // amountInExpected
-            0,              // amountOutExpected
+            0,              // amount-a expected
+            0,              // amount-b expected
             0,              // feeAExpected
             0,              // resAExpected
             0,              // resANewExpected
@@ -244,8 +233,8 @@ describe("=== SWAP TESTS ===", () => {
         
         swapBA(
             0,              // Zero amount B should trigger ERR_ZERO_AMOUNT (but this checks amount-a-net > 0)
-            0,              // amountInExpected
-            0,              // amountOutExpected
+            0,              // amount-a expected
+            0,              // amount-b expected
             0,              // feeBExpected
             0,              // resAExpected
             0,              // resANewExpected
@@ -268,8 +257,8 @@ describe("=== SWAP TESTS ===", () => {
         
         swapBA(
             tinyAmount,     // Tiny amount that may trigger ERR_INVALID_AMOUNT
-            0,              // amountInExpected
-            0,              // amountOutExpected
+            0,              // amount-a expected
+            tinyAmount,     // amount-b expected (input amount)
             0,              // feeBExpected
             0,              // resAExpected
             0,              // resANewExpected

@@ -38,6 +38,8 @@ export function getBalance(
     return received;
 }
 
+export function getBlockHeight(){}
+
 export function getContractOwner(
     contractOwnerExpected: string,
     token: string,

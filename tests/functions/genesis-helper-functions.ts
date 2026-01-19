@@ -43,8 +43,8 @@ export function claim(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "balance": Cl.uint(balanceExpected),
-                "claimed": Cl.uint(claimedExpected)
+                "amount": Cl.uint(claimedExpected),
+                "balance": Cl.uint(balanceExpected)
             })
         )
     );

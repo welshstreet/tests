@@ -38,8 +38,8 @@ describe("=== SETUP TESTS ===", () => {
 
     it("=== SETUP REWARDS PASS ===", () => {
         const setup = setupRewards(disp);
-        getBalance(setup.feeAExpected, 'welshcorgicoin', {address: deployer, contractName: 'rewards' }, deployer, disp);
-        getBalance(setup.feeBExpected, 'street', {address: deployer, contractName: 'rewards' }, deployer, disp);
+        getBalance(setup.rewardPoolInfo.rewardsA, 'welshcorgicoin', {address: deployer, contractName: 'rewards' }, deployer, disp);
+        getBalance(setup.rewardPoolInfo.rewardsB, 'street', {address: deployer, contractName: 'rewards' }, deployer, disp);
     })
 
 });

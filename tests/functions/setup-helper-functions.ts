@@ -1,7 +1,7 @@
-import { disp, FEE_BASIS, INITIAL_WELSH, INITIAL_STREET, MINT_AMOUNT, PRECISION, TRANSFER_WELSH, TRANSFER_STREET, SWAP_WELSH, SWAP_STREET } from "../vitestconfig";
+import { disp, DONATE_STREET, DONATE_WELSH, FEE_BASIS, INITIAL_WELSH, INITIAL_STREET, MINT_AMOUNT, PRECISION, TRANSFER_WELSH, TRANSFER_STREET } from "../vitestconfig";
 import { streetMint } from "./street-helper-functions";
-import { provideInitialLiquidity, provideLiquidity, swapAB, swapBA } from "./exchange-helper-functions";
-import { getRewardPoolInfo, getRewardUserInfo } from "./rewards-helper-functions";
+import { provideInitialLiquidity, provideLiquidity } from "./exchange-helper-functions";
+import { donateRewards, getRewardPoolInfo, getRewardUserInfo } from "./rewards-helper-functions";
 import { getBalance } from "./shared-read-only-helper-functions";
 import { transfer } from "./transfer-helper-function";
 
@@ -167,8 +167,8 @@ export function setupRewards(disp: boolean = false) {
     const initialBlockLp = 10; // Block at which wallet1 last changed their LP position (corrected from blockchain state)
     const initialDebtA = 0;
     const initialDebtB = 0;
-    const initialEarnedA = 0;
-    const initialEarnedB = 0;
+    const initialClaimedA = 0;
+    const initialClaimedB = 0;
     const initialIndexA = 0;
     const initialIndexB = 0;
     const initialUnclaimedA = 0;
@@ -176,144 +176,57 @@ export function setupRewards(disp: boolean = false) {
 
     getRewardUserInfo(
         wallet1,
-        initialBalanceLp,
-        initialBlockLp,
-        initialDebtA,
-        initialDebtB,
-        initialEarnedA,
-        initialEarnedB,
-        initialIndexA,
-        initialIndexB,
-        initialUnclaimedA,
-        initialUnclaimedB,
+        initialBalanceLp,      // balanceExpected: LP tokens from setup
+        initialBlockLp,        // blockExpected: Updated by provide-liquidity
+        initialDebtA,          // debtAExpected: No debt initially
+        initialDebtB,          // debtBExpected: No debt initially
+        initialIndexA,         // indexAExpected: Initial index
+        initialIndexB,         // indexBExpected: Initial index
+        initialUnclaimedA,     // unclaimedAExpected: No unclaimed WELSH rewards
+        initialUnclaimedB,     // unclaimedBExpected: No unclaimed STREET rewards
         deployer,
         disp
     );
 
-    // STEP 3: wallet1 performs WELSH to STREET swap to generate fees/revenue
-    const feeAExpected = Math.floor((SWAP_WELSH * setup.feeExpected) / FEE_BASIS); // FEE_BASIS = FEE_BASIS
-    const revAExpected = Math.floor((SWAP_WELSH * setup.revenueExpected) / FEE_BASIS);
-    const amountANet = SWAP_WELSH - feeAExpected - revAExpected;
+    // STEP 3: deployer donates WELSH and STREET to rewards contract to fund rewards pool
+    donateRewards(DONATE_WELSH, DONATE_STREET, deployer, disp);
 
-    // AMM calculation for amount out
-    const amountOutB = Math.floor((amountANet * setup.reserveBExpected) / (setup.reserveAExpected + amountANet));
-    
-    // New reserve values after swap
-    const resANew = setup.reserveAExpected + amountANet;
-    const resBNew = setup.reserveBExpected - amountOutB;
+    // STEP 4: Calculate global index updates from donation
+    // Donation impact: (donation_amount * PRECISION) / total_lp_supply
+    const globalIndexA = Math.floor((DONATE_WELSH * PRECISION) / setup.totalLpSupply);
+    const globalIndexB = Math.floor((DONATE_STREET * PRECISION) / setup.totalLpSupply);
 
-    swapAB(
-        SWAP_WELSH,
-        SWAP_WELSH,
-        amountOutB,
-        feeAExpected,
-        setup.reserveAExpected,
-        resANew,
-        setup.reserveBExpected,
-        resBNew,
-        revAExpected,
-        wallet1,
-        disp
-    );
-
-    // STEP 4: Call getRewardPoolInfo() and getRewardUserInfo(wallet1) to verify rewards state after Welsh swap
-    // After swap: fees should be distributed to rewards contract, and global index should be updated
-
-    let globalIndexA = Math.floor((feeAExpected * PRECISION) / setup.totalLpSupply);
-
-    getRewardPoolInfo(
-        globalIndexA, // Should be updated based on fee distribution
-        initialGlobalIndexB,        // Should remain 0 (no STREET fees yet)
-        feeAExpected,
-        0,
-        deployer,
-        disp
-    );
-
-    // Check wallet1's reward info after first swap
-    const wallet1EarnedA = Math.floor((initialBalanceLp * (globalIndexA - initialIndexA)) / PRECISION);
-
-    getRewardUserInfo(
-        wallet1,
-        initialBalanceLp,
-        initialBlockLp,
-        initialDebtA,
-        initialDebtB,
-        wallet1EarnedA,
-        initialEarnedB,
-        initialIndexA,
-        initialIndexB,
-        wallet1EarnedA,
-        initialUnclaimedB,
-        deployer,
-        disp
-    );
-
-    // STEP 5: wallet1 performs STREET to WELSH swap to generate more fees/revenue
-    const feeBExpected = Math.floor((SWAP_STREET * setup.feeExpected) / FEE_BASIS);
-    const revBExpected = Math.floor((SWAP_STREET * setup.revenueExpected) / FEE_BASIS);
-    const amountBNet = SWAP_STREET - feeBExpected - revBExpected;
-
-    // AMM calculation using updated reserves from first swap
-    const amountOutA = Math.floor((amountBNet * resANew) / (resBNew + amountBNet));
-
-    const resA = resANew - amountOutA;
-    const resB = resBNew + amountBNet;
-
-    swapBA(
-        SWAP_STREET,
-        SWAP_STREET,
-        amountOutA,
-        feeBExpected,
-        resANew,
-        resA,
-        resBNew,
-        resB,
-        revBExpected,
-        wallet1,
-        disp
-    );
-
-    let globalIndexB = Math.floor((feeBExpected * PRECISION) / setup.totalLpSupply);
-
-
-    // STEP 6: Call getRewardPoolInfo() and getRewardUserInfo(wallet1) to verify final rewards state
-    // After both swaps: both WELSH and STREET fees should be in rewards
-
+    // STEP 5: Verify reward pool info after donation
     const rewardPoolInfo = getRewardPoolInfo(
-        globalIndexA,
-        globalIndexB,
-        feeAExpected,
-        feeBExpected,
+        globalIndexA,           // Global index A updated from donation
+        globalIndexB,           // Global index B updated from donation  
+        DONATE_WELSH,           // Total WELSH rewards from donation
+        DONATE_STREET,          // Total STREET rewards from donation
         deployer,
         disp
     );
 
-    // Check wallet1's final reward info
-    const wallet1EarnedB = Math.floor((initialBalanceLp * (globalIndexB - initialIndexB)) / PRECISION);
+    // STEP 6: Check wallet1's reward info after donation
+    // Calculate wallet1's claimable rewards from donation
+    const wallet1ClaimedA = Math.floor((initialBalanceLp * (globalIndexA - initialIndexA)) / PRECISION);
+    const wallet1ClaimedB = Math.floor((initialBalanceLp * (globalIndexB - initialIndexB)) / PRECISION);
 
     const userRewardInfo = getRewardUserInfo(
         wallet1,
-        initialBalanceLp,
-        initialBlockLp,
-        initialDebtA,
-        initialDebtB,
-        wallet1EarnedA,
-        wallet1EarnedB,
-        initialIndexA,
-        initialIndexB,
-        wallet1EarnedA,
-        wallet1EarnedB,
+        initialBalanceLp,      // balanceExpected: LP tokens unchanged
+        initialBlockLp,        // blockExpected: Block at which wallet1 last changed LP position
+        initialDebtA,          // debtAExpected: No debt initially
+        initialDebtB,          // debtBExpected: No debt initially
+        initialIndexA,         // indexAExpected: Initial index
+        initialIndexB,         // indexBExpected: Initial index
+        wallet1ClaimedA,       // unclaimedAExpected: WELSH rewards from donation
+        wallet1ClaimedB,       // unclaimedBExpected: STREET rewards from donation
         deployer,
         disp
     );
 
     return {
         ...setup,
-        feeAExpected,
-        feeBExpected,
-        resA,
-        resB,
         rewardPoolInfo,
         userRewardInfo
     };

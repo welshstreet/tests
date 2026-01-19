@@ -4,7 +4,7 @@ import { expect } from "vitest";
 const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;
 
-export function burn(
+export function creditBurn(
   amountExpected: number,
   sender: any,
   disp: boolean = false
@@ -45,7 +45,7 @@ export function burn(
   expect(test.result).toEqual(
     Cl.ok(
       Cl.tuple({
-        "burned": Cl.uint(amountExpected),
+        "amount": Cl.uint(amountExpected),
       })
     )
   );
@@ -56,7 +56,7 @@ export function burn(
   return Number(amountExpected);
 }
 
-export function mint(
+export function creditMint(
   amountExpected: number,
   sender: any,
   disp: boolean = false
@@ -97,7 +97,7 @@ export function mint(
   expect(test.result).toEqual(
     Cl.ok(
       Cl.tuple({
-        "minted": Cl.uint(amountExpected),
+        "amount": Cl.uint(amountExpected),
       })
     )
   );

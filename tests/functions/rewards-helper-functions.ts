@@ -5,16 +5,8 @@ const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;
 
 export function claimRewards(
-    balanceLpExpected: number,
-    blockLpExpected: number,
-    claimedAExpected: number,
-    claimedBExpected: number,
-    debtAExpected: number,
-    debtBExpected: number,
-    globalIndexAExpected: number,
-    globalIndexBExpected: number,
-    indexAExpected: number,
-    indexBExpected: number,
+    amountAExpected: number,
+    amountBExpected: number,
     sender: any,
     disp: boolean = false
 ){
@@ -37,16 +29,8 @@ export function claimRewards(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "balance-lp": Cl.uint(balanceLpExpected),
-                "block-lp": Cl.uint(blockLpExpected),
-                "claimed-a": Cl.uint(claimedAExpected),
-                "claimed-b": Cl.uint(claimedBExpected),
-                "debt-a": Cl.uint(debtAExpected),
-                "debt-b": Cl.uint(debtBExpected),
-                "global-index-a": Cl.uint(globalIndexAExpected),
-                "global-index-b": Cl.uint(globalIndexBExpected),
-                "index-a": Cl.uint(indexAExpected),
-                "index-b": Cl.uint(indexBExpected),
+                "amount-a": Cl.uint(amountAExpected),
+                "amount-b": Cl.uint(amountBExpected),
             })
         )
     );
@@ -58,8 +42,8 @@ export function claimRewards(
 }
 
 export function cleanupRewards(
-    cleanupAExpected: number,
-    cleanupBExpected: number,
+    amountAExpected: number,
+    amountBExpected: number,
     sender: any,
     disp: boolean = false
 ){
@@ -90,8 +74,8 @@ export function cleanupRewards(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "cleanup-a": Cl.uint(cleanupAExpected),
-                "cleanup-b": Cl.uint(cleanupBExpected),
+                "amount-a": Cl.uint(amountAExpected),
+                "amount-b": Cl.uint(amountBExpected),
             })
         )
     );
@@ -127,8 +111,8 @@ export function donateRewards(
     expect(test.result).toEqual(
         Cl.ok(
             Cl.tuple({
-                "donate-a": Cl.uint(amountA),
-                "donate-b": Cl.uint(amountB),
+                "amount-a": Cl.uint(amountA),
+                "amount-b": Cl.uint(amountB),
             })
         )
     );
@@ -140,8 +124,6 @@ export function donateRewards(
 }
 
 export function updateEmissionRewards(
-    emittedAmountExpected: number,
-    globalIndexBExpected: number,
     sender: any,
     disp: boolean = false
 ){
@@ -169,14 +151,7 @@ export function updateEmissionRewards(
         return false;
     }
 
-    expect(test.result).toEqual(
-        Cl.ok(
-            Cl.tuple({
-                "emitted-amount": Cl.uint(emittedAmountExpected),
-                "global-index-b": Cl.uint(globalIndexBExpected),
-            })
-        )
-    );
+    expect(test.result).toEqual(Cl.ok(Cl.bool(true)));
 
     if (disp && test.result.type === 'ok') {
         console.log(`✅ Update emission rewards successful`);
@@ -364,12 +339,12 @@ export function getCleanupRewards(
     actualBExpected: number,
     claimedAExpected: number,
     claimedBExpected: number,
+    cleanupAExpected: number,
+    cleanupBExpected: number,
     distributedAExpected: number,
     distributedBExpected: number,
     outstandingAExpected: number,
     outstandingBExpected: number,
-    cleanupAExpected: number,
-    cleanupBExpected: number,
     sender: any,
     disp: boolean = false
 ) {
@@ -386,29 +361,29 @@ export function getCleanupRewards(
     const receivedCleanupA = Number(info['cleanup-a'].value);
     const receivedCleanupB = Number(info['cleanup-b'].value);
 
-    // Validate all expected values
+    // Validate all expected values in alphabetical order
     expect(receivedActualA).toEqual(actualAExpected);
     expect(receivedActualB).toEqual(actualBExpected);
     expect(receivedClaimedA).toEqual(claimedAExpected);
     expect(receivedClaimedB).toEqual(claimedBExpected);
+    expect(receivedCleanupA).toEqual(cleanupAExpected);
+    expect(receivedCleanupB).toEqual(cleanupBExpected);
     expect(receivedDistributedA).toEqual(distributedAExpected);
     expect(receivedDistributedB).toEqual(distributedBExpected);
     expect(receivedOutstandingA).toEqual(outstandingAExpected);
     expect(receivedOutstandingB).toEqual(outstandingBExpected);
-    expect(receivedCleanupA).toEqual(cleanupAExpected);
-    expect(receivedCleanupB).toEqual(cleanupBExpected);
 
     const allMatch = (
         receivedActualA === actualAExpected &&
         receivedActualB === actualBExpected &&
         receivedClaimedA === claimedAExpected &&
         receivedClaimedB === claimedBExpected &&
+        receivedCleanupA === cleanupAExpected &&
+        receivedCleanupB === cleanupBExpected &&
         receivedDistributedA === distributedAExpected &&
         receivedDistributedB === distributedBExpected &&
         receivedOutstandingA === outstandingAExpected &&
-        receivedOutstandingB === outstandingBExpected &&
-        receivedCleanupA === cleanupAExpected &&
-        receivedCleanupB === cleanupBExpected
+        receivedOutstandingB === outstandingBExpected
     );
 
     if (disp) {
@@ -417,18 +392,18 @@ export function getCleanupRewards(
         } else {
             console.log(`☑️ getCleanupRewards Fail: Values mismatch`);
         }
-        // Display all values line-by-line for clarity
+        // Display all values line-by-line for clarity in alphabetical order
         console.log(`Cleanup Rewards Info:`);
         console.log(`  actual-a: ${receivedActualA}`);
         console.log(`  actual-b: ${receivedActualB}`);
         console.log(`  claimed-a: ${receivedClaimedA}`);
         console.log(`  claimed-b: ${receivedClaimedB}`);
+        console.log(`  cleanup-a: ${receivedCleanupA}`);
+        console.log(`  cleanup-b: ${receivedCleanupB}`);
         console.log(`  distributed-a: ${receivedDistributedA}`);
         console.log(`  distributed-b: ${receivedDistributedB}`);
         console.log(`  outstanding-a: ${receivedOutstandingA}`);
         console.log(`  outstanding-b: ${receivedOutstandingB}`);
-        console.log(`  cleanup-a: ${receivedCleanupA}`);
-        console.log(`  cleanup-b: ${receivedCleanupB}`);
     }
 
     return {
@@ -497,51 +472,43 @@ export function getRewardPoolInfo(
 
 export function getRewardUserInfo(
     user: any,                        // Contract input - user principal
-    balanceLpExpected: number,        // Expected return value
-    blockLpExpected: number,          // Expected return value
+    balanceExpected: number,        // Expected return value
+    blockExpected: number,          // Expected return value
     debtAExpected: number,            // Expected return value
     debtBExpected: number,            // Expected return value
-    earnedAExpected: number,          // Expected return value
-    earnedBExpected: number,          // Expected return value
     indexAExpected: number,           // Expected return value
     indexBExpected: number,           // Expected return value
-    unclaimedAExpected: number,       // Expected return value
-    unclaimedBExpected: number,       // Expected return value
+    unclaimedAExpected: number,       // Expected return value - net claimable amount
+    unclaimedBExpected: number,       // Expected return value - net claimable amount
     sender: any,                      // Transaction sender
     disp: boolean = false             // Optional with default false
 ) {
     const test = simnet.callReadOnlyFn("rewards", "get-reward-user-info", [Cl.principal(user)], sender);
     const info = (test.result as any).value.value;
-    const receivedBalanceLp = Number(info['balance-lp'].value);
-    const receivedBlockLp = Number(info['block-lp'].value);
+    const receivedBalanceLp = Number(info['balance'].value);
+    const receivedBlockLp = Number(info['block'].value);
     const receivedDebtA = Number(info['debt-a'].value);
     const receivedDebtB = Number(info['debt-b'].value);
-    const receivedEarnedA = Number(info['earned-a'].value);
-    const receivedEarnedB = Number(info['earned-b'].value);
     const receivedIndexA = Number(info['index-a'].value);
     const receivedIndexB = Number(info['index-b'].value);
     const receivedUnclaimedA = Number(info['unclaimed-a'].value);
     const receivedUnclaimedB = Number(info['unclaimed-b'].value);
 
     // Validate all expected values
-    expect(receivedBalanceLp).toEqual(balanceLpExpected);
-    expect(receivedBlockLp).toEqual(blockLpExpected);
+    expect(receivedBalanceLp).toEqual(balanceExpected);
+    expect(receivedBlockLp).toEqual(blockExpected);
     expect(receivedDebtA).toEqual(debtAExpected);
     expect(receivedDebtB).toEqual(debtBExpected);
-    expect(receivedEarnedA).toEqual(earnedAExpected);
-    expect(receivedEarnedB).toEqual(earnedBExpected);
     expect(receivedIndexA).toEqual(indexAExpected);
     expect(receivedIndexB).toEqual(indexBExpected);
     expect(receivedUnclaimedA).toEqual(unclaimedAExpected);
     expect(receivedUnclaimedB).toEqual(unclaimedBExpected);
 
     const allMatch = (
-        receivedBalanceLp === balanceLpExpected &&
-        receivedBlockLp === blockLpExpected &&
+        receivedBalanceLp === balanceExpected &&
+        receivedBlockLp === blockExpected &&
         receivedDebtA === debtAExpected &&
         receivedDebtB === debtBExpected &&
-        receivedEarnedA === earnedAExpected &&
-        receivedEarnedB === earnedBExpected &&
         receivedIndexA === indexAExpected &&
         receivedIndexB === indexBExpected &&
         receivedUnclaimedA === unclaimedAExpected &&
@@ -550,18 +517,14 @@ export function getRewardUserInfo(
 
     if (disp) {
         if (allMatch) {
-            console.log(`✅ getRewardUserInfo Pass: All values match expected for user ${user}`);
+            console.log(`✅ getRewardUserInfo Pass: ${user}`);
         } else {
-            console.log(`☑️ getRewardUserInfo Fail: Values mismatch for user ${user}`);
+            console.log(`☑️ getRewardUserInfo Fail: ${user}`);
         }
-        // Display all values line-by-line for clarity
-        console.log(`Reward User Info for ${user}:`);
-        console.log(`  balance-lp: ${receivedBalanceLp}`);
-        console.log(`  block-lp: ${receivedBlockLp}`);
+        console.log(`  balance: ${receivedBalanceLp}`);
+        console.log(`  block: ${receivedBlockLp}`);
         console.log(`  debt-a: ${receivedDebtA}`);
         console.log(`  debt-b: ${receivedDebtB}`);
-        console.log(`  earned-a: ${receivedEarnedA}`);
-        console.log(`  earned-b: ${receivedEarnedB}`);
         console.log(`  index-a: ${receivedIndexA}`);
         console.log(`  index-b: ${receivedIndexB}`);
         console.log(`  unclaimed-a: ${receivedUnclaimedA}`);
@@ -569,16 +532,14 @@ export function getRewardUserInfo(
     }
 
     return {
-        balanceLp: receivedBalanceLp,
-        blockLp: receivedBlockLp,
+        balance: receivedBalanceLp,
+        block: receivedBlockLp,
         debtA: receivedDebtA,
         debtB: receivedDebtB,
-        earnedA: receivedEarnedA,
-        earnedB: receivedEarnedB,
         indexA: receivedIndexA,
         indexB: receivedIndexB,
         unclaimedA: receivedUnclaimedA,
-        unclaimedB: receivedUnclaimedB
+        unclaimedB: receivedUnclaimedB,
     };
 }
 
@@ -621,20 +582,20 @@ export function updateBurnRewards(
     return true;
 }
 
-export function updateSenderRewards(
+export function updateCreditSender(
     sender: any,
     transferAmount: number,
     caller: any,
     disp: boolean = false
 ) {
     if (disp) {
-        console.log(`\n=== updateSenderRewards: ${transferAmount} ===`);
+        console.log(`\n=== updateCreditSender: ${transferAmount} ===`);
         console.log(`Sender: ${sender}, Caller: ${caller}`);
     }
 
     const test = simnet.callPublicFn(
         "rewards",
-        "update-sender-rewards",
+        "update-transfer-sender",
         [
             Cl.principal(sender),
             Cl.uint(transferAmount)
@@ -680,20 +641,20 @@ export function updateSenderRewards(
     return true;
 }
 
-export function updateRecipientRewards(
+export function updateCreditRecipient(
     recipient: any,
     transferAmount: number,
     caller: any,
     disp: boolean = false
 ) {
     if (disp) {
-        console.log(`\n=== updateRecipientRewards: ${transferAmount} to ${recipient} ===`);
+        console.log(`\n=== updateCreditRecipient: ${transferAmount} to ${recipient} ===`);
         console.log(`Caller: ${caller}`);
     }
 
     const test = simnet.callPublicFn(
         "rewards",
-        "update-recipient-rewards",
+        "update-transfer-recipient",
         [
             Cl.principal(recipient),
             Cl.uint(transferAmount)

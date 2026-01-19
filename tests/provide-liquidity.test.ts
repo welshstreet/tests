@@ -100,7 +100,7 @@ describe("=== PROVIDE LIQUIDITY TESTS ===", () => {
         }
         
         // wallet1 should have 1/3 of rewards since they have 1/3 of total LP supply  
-        // Contract calculation: (balance-lp * ((donate * PRECISION) / total-lp)) / PRECISION
+        // Contract calculation: (balance * ((donate * PRECISION) / total-lp)) / PRECISION
         // Due to integer division precision loss: actual earned differs from simple donate/3
         const wallet1LpBalance = setup.totalLpSupply / 3; // Each participant has 1/3 of total LP
         
@@ -112,16 +112,14 @@ describe("=== PROVIDE LIQUIDITY TESTS ===", () => {
         
         const wallet1RewardsBefore = getRewardUserInfo(
             wallet1,
-            wallet1LpBalance, // balance-lp: wallet1's current LP balance
-            10, // block-lp: when wallet1 provided liquidity
-            0, // debt-a: should be 0 initially
-            0, // debt-b: should be 0 initially 
-            expectedEarnedA, // earned-a: calculated with contract precision
-            expectedEarnedB, // earned-b: calculated with contract precision
-            0, // index-a: global index starts at 0
-            0, // index-b: global index starts at 0  
-            expectedEarnedA, // unclaimed-a: matches earned-a
-            expectedEarnedB, // unclaimed-b: matches earned-b
+            wallet1LpBalance,      // balanceExpected: wallet1's current LP balance  
+            10,                    // blockExpected: when wallet1 provided liquidity
+            0,                     // debtAExpected: should be 0 initially
+            0,                     // debtBExpected: should be 0 initially
+            0,                     // indexAExpected: global index starts at 0
+            0,                     // indexBExpected: global index starts at 0
+            expectedEarnedA,       // unclaimedAExpected: matches earned-a
+            expectedEarnedB,       // unclaimedBExpected: matches earned-b
             wallet1,
             disp
         );
@@ -163,16 +161,14 @@ describe("=== PROVIDE LIQUIDITY TESTS ===", () => {
         // Expected values after provide-liquidity with reward preservation:
         const wallet1RewardsAfter = getRewardUserInfo(
             wallet1,
-            expectedNewLpBalance, // balance-lp: Current + minted (wallet1's NEW LP balance)
-            13, // block-lp: Updated to current block (block 13)
-            debtA, // debt-a: Set to maintain preserved unclaimed amount
-            debtB, // debt-b: Set to maintain preserved unclaimed amount
-            newEarnedA, // earned-a: Recalculated with new LP balance
-            newEarnedB, // earned-b: Recalculated with new LP balance
-            0, // index-a: current global index
-            0, // index-b: current global index  
-            expectedEarnedA, // unclaimed-a: PRESERVED! This is the correct behavior for provide-liquidity
-            expectedEarnedB, // unclaimed-b: PRESERVED! This is the correct behavior for provide-liquidity
+            expectedNewLpBalance,  // balanceExpected: wallet1's NEW LP balance (Current + minted)
+            13,                    // blockExpected: Updated to current block (block 13)
+            debtA,                 // debtAExpected: Set to maintain preserved unclaimed amount
+            debtB,                 // debtBExpected: Set to maintain preserved unclaimed amount
+            0,                     // indexAExpected: current global index
+            0,                     // indexBExpected: current global index
+            expectedEarnedA,       // unclaimedAExpected: PRESERVED! This is the correct behavior for provide-liquidity
+            expectedEarnedB,       // unclaimedBExpected: PRESERVED! This is the correct behavior for provide-liquidity
             wallet1,
             disp
         );

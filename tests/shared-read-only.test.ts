@@ -67,7 +67,7 @@ describe("=== SHARED READ ONLY FUNCTION TESTS ===", () => {
     });
 
     it("=== GET NAME ===", () => {
-        const nameExpected = "Welsh Street";
+        const nameExpected = "Street";
         getName(nameExpected, 'street', deployer, disp);
     });
 

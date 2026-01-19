@@ -39,7 +39,7 @@
         (and
           (>= (get debt-a info) u0)
           (>= (get debt-b info) u0)
-          (>= (get balance-lp info) u0)))
+          (>= (get balance info) u0)))
       true))) ;; No user record is valid
 
 ;; Invariant 6: Index snapshots should be valid

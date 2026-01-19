@@ -18,8 +18,10 @@
 
 (define-map balances
     { address: principal }
-    { balance: uint,
-    claimed: uint }
+    { 
+      balance: uint,
+      claimed: uint
+    }
 )
 
 (define-public (claim)
@@ -40,14 +42,13 @@
             claimed: user-claim
             })
         (ok {
-            balance: user-balance,
-            claimed: user-claim
+            amount: user-claim,
+            balance: user-balance
         })
     )
     )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (contribute (amount uint))
     (let (
         (current-total (var-get total-contribution))
@@ -73,7 +74,6 @@
     )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (transformer
     (token <sip-010>)
     (amount uint)
@@ -82,7 +82,6 @@
     (as-contract (contract-call? token transfer amount tx-sender recipient none))
 )
 
-;; #[allow(unchecked_data)]
 (define-public (withdrawal)
     (let (
         (balance (unwrap-panic (contract-call? .welshcorgicoin get-balance .genesis)))
@@ -99,8 +98,8 @@
 ;; custom read-only
 (define-read-only (get-blocks)
     (ok {
-        stacks-block: stacks-block-height,
-        bitcoin-block: burn-block-height
+        bitcoin-block: burn-block-height,
+        stacks-block: stacks-block-height
     })
 )
 

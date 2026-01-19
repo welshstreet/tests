@@ -20,7 +20,7 @@
 (define-constant EMISSION_INTERVAL u1)
 (define-constant MINT_CAP u5000000000000000)
 (define-constant TOKEN_DECIMALS u6)
-(define-constant TOKEN_NAME "Welsh Street")
+(define-constant TOKEN_NAME "Street")
 (define-constant TOKEN_SYMBOL "STREET")
 (define-constant TOKEN_SUPPLY u10000000000000000)
 
@@ -34,13 +34,12 @@
 
 (define-public (emission-mint)
   (let (
-      (current-block burn-block-height)
       (last-mint (var-get last-mint-block))
       (total-supply-lp (unwrap-panic (contract-call? .credit get-total-supply)))
     )
     (begin
       (asserts! (is-eq tx-sender (var-get contract-owner)) ERR_NOT_CONTRACT_OWNER)
-      (asserts! (not (is-eq current-block last-mint)) ERR_EMISSION_INTERVAL)
+      (asserts! (not (is-eq burn-block-height last-mint)) ERR_EMISSION_INTERVAL)
       (asserts! (> total-supply-lp u0) ERR_NO_LIQUIDITY)
       (asserts!
         (or
@@ -50,10 +49,10 @@
         ERR_EXCEEDS_TOTAL_SUPPLY)
       (try! (ft-mint? street EMISSION_AMOUNT .rewards))
       (var-set emission-epoch (+ (var-get emission-epoch) u1))
-      (var-set last-mint-block current-block)
+      (var-set last-mint-block burn-block-height)
       (ok {
         amount: EMISSION_AMOUNT,
-        block: current-block,
+        block: burn-block-height,
         epoch: (var-get emission-epoch),
         })
     )
@@ -74,11 +73,10 @@
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR_NOT_CONTRACT_OWNER)
     (asserts! (is-eq (var-get kill-switch) false) ERR_KILL_SWITCH_FLIPPED)
     (var-set kill-switch true)
-    (ok {kill-switch: true})
+    (ok true)
   )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (set-token-uri (value (string-utf8 256)))
   (begin
     (asserts! (is-eq tx-sender (var-get contract-owner)) ERR_NOT_CONTRACT_OWNER)
@@ -110,7 +108,6 @@
     (memo (optional (buff 34)))
   )
   (begin
-    ;; #[filter(amount, recipient)]
     (asserts! (> amount u0) ERR_ZERO_AMOUNT)
     (asserts! (is-eq tx-sender sender) ERR_NOT_TOKEN_OWNER)
     (try! (ft-transfer? street amount sender recipient))

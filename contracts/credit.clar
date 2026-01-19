@@ -13,7 +13,7 @@
 
 ;; metadata
 (define-constant TOKEN_DECIMALS u6)
-(define-constant TOKEN_NAME "Street Credit")
+(define-constant TOKEN_NAME "Credit")
 (define-constant TOKEN_SYMBOL "CREDIT")
 
 ;; variables
@@ -25,7 +25,9 @@
       (asserts! (> amount u0) ERR_ZERO_AMOUNT)
       (asserts! (is-eq contract-caller .exchange) ERR_NOT_AUTHORIZED)
       (try! (ft-burn? credit amount tx-sender))
-      (ok {burned: amount})
+      (ok {
+        amount: amount
+      })
     )
 )
 
@@ -34,7 +36,9 @@
       (asserts! (> amount u0) ERR_ZERO_AMOUNT)
       (asserts! (is-eq contract-caller .exchange) ERR_NOT_AUTHORIZED)
       (try! (ft-mint? credit amount tx-sender))
-      (ok {minted: amount})
+      (ok {
+        amount: amount
+      })
     )
 )
 

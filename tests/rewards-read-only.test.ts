@@ -36,12 +36,10 @@ describe("=== REWARDS READ ONLY FUNCTIONS TESTS ===", () => {
         // After initial liquidity provision, deployer should have LP tokens but no rewards yet
         // IMPORTANT: provide-initial-liquidity NOW calls update-provide-rewards
         // This creates the user-rewards map entry (needed for future burn redistribution)
-        const balanceLpExpected = setup.mintedLpExpected;  // LP tokens from setup
-        const blockLpExpected = 5;       // Updated by provide-initial-liquidity
+        const balanceExpected = setup.mintedLpExpected;  // LP tokens from setup
+        const blockExpected = 5;       // Updated by provide-initial-liquidity
         const debtAExpected = 0;         // No debt initially
         const debtBExpected = 0;         // No debt initially
-        const earnedAExpected = 0;       // No rewards earned yet
-        const earnedBExpected = 0;       // No rewards earned yet
         const indexAExpected = 0;        // Initial index
         const indexBExpected = 0;        // Initial index
         const unclaimedAExpected = 0;    // No unclaimed rewards
@@ -49,16 +47,14 @@ describe("=== REWARDS READ ONLY FUNCTIONS TESTS ===", () => {
 
         getRewardUserInfo(
             deployer,
-            balanceLpExpected,
-            blockLpExpected,
-            debtAExpected,
-            debtBExpected,
-            earnedAExpected,
-            earnedBExpected,
-            indexAExpected,
-            indexBExpected,
-            unclaimedAExpected,
-            unclaimedBExpected,
+            balanceExpected,      // balanceExpected: LP tokens from setup
+            blockExpected,        // blockExpected: Updated by provide-initial-liquidity
+            debtAExpected,          // debtAExpected: No debt initially
+            debtBExpected,          // debtBExpected: No debt initially
+            indexAExpected,         // indexAExpected: Initial index
+            indexBExpected,         // indexBExpected: Initial index
+            unclaimedAExpected,     // unclaimedAExpected: No unclaimed WELSH rewards
+            unclaimedBExpected,     // unclaimedBExpected: No unclaimed STREET rewards
             deployer,
             disp
         );

@@ -26,8 +26,8 @@ describe("=== GENESIS CLAIM FUNCTION TESTS ===", () => {
         setClaimActive(true, deployer, disp);
 
         // STEP 5: wallet1 claims their tokens
-        balanceExpected = CONTRIBUTE_WELSH;
         claimedExpected = CONTRIBUTE_WELSH / totalContribution * setup.streetMintExpected;
+        balanceExpected = CONTRIBUTE_WELSH;
         claim(balanceExpected, claimedExpected, wallet1, disp);
     });
 

@@ -240,7 +240,7 @@ return;
         );
 
         // STEP 9: Validate over 100% of supply has been emitted
-        getBalance(TOTAL_SUPPLY_STREET + EMISSION_AMOUNT_KILL_SWITCH_TEST, 'street', { address: deployer, contractName: "rewards" }, deployer, true);
+        getBalance(TOTAL_SUPPLY_STREET + EMISSION_AMOUNT_KILL_SWITCH_TEST, 'street', { address: deployer, contractName: "rewards" }, deployer, disp);
     });
 
     it("=== EMISSION EXCEEDS SUPPLY LIMIT - KILL SWITCH FLIPPED ===", () => {
@@ -296,8 +296,8 @@ return;
         mineBurnBlock(13);
 
         // STEP 8: Flip the kill switch
-        setKillSwitch(deployer, true);
-        getKillSwitch(true, deployer, true);
+        setKillSwitch(deployer, disp);
+        getKillSwitch(true, deployer, disp);
 
         // STEP 9: 11th emission should fail due to kill switch
         emissionMint(

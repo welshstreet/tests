@@ -26,8 +26,8 @@
 (define-map user-rewards
   { account: principal }
   {
-    balance-lp: uint,
-    block-lp: uint,
+    balance: uint,
+    block: uint,
     debt-a: uint,
     debt-b: uint,
     index-a: uint,
@@ -35,12 +35,13 @@
   }
 )
 
+;; reward functions
 (define-public (claim-rewards)
   (let (
-    (balance-lp (unwrap-panic (contract-call? .credit get-balance tx-sender)))
+    (balance (unwrap-panic (contract-call? .credit get-balance tx-sender)))
     (info (default-to {
-      balance-lp: u0,
-      block-lp: u0,
+      balance: u0,
+      block: u0,
       debt-a: u0,
       debt-b: u0,
       index-a: u0,
@@ -48,45 +49,37 @@
       (map-get? user-rewards { account: tx-sender })))
     (current-global-a (var-get global-index-a))
     (current-global-b (var-get global-index-b))
+    (debt-a (get debt-a info))
+    (debt-b (get debt-b info))
     (user-index-a (get index-a info))
     (user-index-b (get index-b info))
-    (earned-a (/ (* balance-lp (- current-global-a user-index-a)) PRECISION))
-    (earned-b (/ (* balance-lp (- current-global-b user-index-b)) PRECISION))
-    (deb-a (get debt-a info))
-    (deb-b (get debt-b info))
-    (claimed-a (if (> earned-a deb-a) (- earned-a deb-a) u0))
-    (claimed-b (if (> earned-b deb-b) (- earned-b deb-b) u0))
+    (earned-a (/ (* balance (- current-global-a user-index-a)) PRECISION))
+    (earned-b (/ (* balance (- current-global-b user-index-b)) PRECISION))
+    (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
+    (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
   )
     (begin
-      (if (> claimed-a u0)
-        (try! (transformer .welshcorgicoin claimed-a tx-sender))
+      (if (> unclaimed-a u0)
+        (try! (transformer .welshcorgicoin unclaimed-a tx-sender))
         true
       )
-      (if (> claimed-b u0)
-        (try! (transformer .street claimed-b tx-sender))
+      (if (> unclaimed-b u0)
+        (try! (transformer .street unclaimed-b tx-sender))
         true
       )
-      (var-set total-claimed-a (+ (var-get total-claimed-a) claimed-a))
-      (var-set total-claimed-b (+ (var-get total-claimed-b) claimed-b))
+      (var-set total-claimed-a (+ (var-get total-claimed-a) unclaimed-a))
+      (var-set total-claimed-b (+ (var-get total-claimed-b) unclaimed-b))
       (map-set user-rewards { account: tx-sender } {
-        balance-lp: balance-lp,
-        block-lp: (get block-lp info),
-        debt-a: (+ deb-a claimed-a),
-        debt-b: (+ deb-b claimed-b),
+        balance: balance,
+        block: (get block info),
+        debt-a: (+ debt-a unclaimed-a),
+        debt-b: (+ debt-b unclaimed-b),
         index-a: user-index-a,
         index-b: user-index-b
         })
       (ok {
-        balance-lp: balance-lp,
-        block-lp: (get block-lp info),
-        claimed-a: claimed-a,
-        claimed-b: claimed-b,
-        debt-a: (+ deb-a claimed-a),
-        debt-b: (+ deb-b claimed-b),
-        global-index-a: current-global-a,
-        global-index-b: current-global-b,
-        index-a: user-index-a,
-        index-b: user-index-b
+        amount-a: unclaimed-a,
+        amount-b: unclaimed-b,
         })  
     )
   )
@@ -96,13 +89,13 @@
   (let (
     (actual-a (unwrap-panic (contract-call? .welshcorgicoin get-balance .rewards)))
     (actual-b (unwrap-panic (contract-call? .street get-balance .rewards)))
-    (distributed-a (var-get total-distributed-a))
-    (distributed-b (var-get total-distributed-b))
     (claimed-a (var-get total-claimed-a))
     (claimed-b (var-get total-claimed-b))
+    (distributed-a (var-get total-distributed-a))
+    (distributed-b (var-get total-distributed-b))
+    (dust-threshold u10000)
     (outstanding-a (- distributed-a claimed-a))
     (outstanding-b (- distributed-b claimed-b))
-    (dust-threshold u10000)
     (cleanup-a (if (> actual-a outstanding-a)
                   (- actual-a outstanding-a)
                   (if (and (is-eq actual-a outstanding-a)
@@ -125,14 +118,13 @@
         (try! (as-contract (update-rewards-b cleanup-b)))
         true)
       (ok {
-        cleanup-a: cleanup-a,
-        cleanup-b: cleanup-b,
+        amount-a: cleanup-a,
+        amount-b: cleanup-b,
       })
     )
   )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (donate-rewards (amount-a uint) (amount-b uint))
     (begin
       (if (> amount-a u0)
@@ -150,22 +142,38 @@
         true
       )
     (ok {
-      donate-a: amount-a,
-      donate-b: amount-b
+      amount-a: amount-a,
+      amount-b: amount-b
     })
   )
 )
 
-;; #[allow(unchecked_data)]
-(define-public (update-burn-rewards (user principal) (burn-amount uint))
+(define-public (set-contract-owner (new-owner principal))
+  (begin
+    (asserts! (is-eq contract-caller (var-get contract-owner)) ERR_NOT_CONTRACT_OWNER)
+    (asserts! (not (is-eq new-owner (var-get contract-owner))) ERR_INVALID_PRINCIPAL)
+    (var-set contract-owner new-owner)
+    (ok true)
+  )
+)
+
+(define-public (transformer
+    (token <sip-010>)
+    (amount uint)
+    (recipient principal)
+  )
+  (as-contract (contract-call? token transfer amount tx-sender recipient none))
+)
+
+(define-public (update-burn-rewards (user principal) (amount uint))
   (let (
     (balance (unwrap-panic (contract-call? .credit get-balance user)))
+    (block stacks-block-height)
     (global-a (var-get global-index-a))
     (global-b (var-get global-index-b))
-    (block stacks-block-height)
     (info (map-get? user-rewards { account: user }))
     (total-lp (unwrap-panic (contract-call? .credit get-total-supply)))
-    (remaining-lp (- balance burn-amount))
+    (new-balance (- balance amount))
     (other-lp (- total-lp balance))
   )
     (begin
@@ -173,16 +181,16 @@
       (if (is-some info)
         (let (
           (data (unwrap-panic info))
-          (index-a (get index-a data))
-          (index-b (get index-b data))
           (debt-a (get debt-a data))
           (debt-b (get debt-b data))
+          (index-a (get index-a data))
+          (index-b (get index-b data))
           (earned-a (/ (* balance (- global-a index-a)) PRECISION))
           (earned-b (/ (* balance (- global-b index-b)) PRECISION))
           (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
           (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
-          (forfeit-a (/ (* unclaimed-a burn-amount) balance))
-          (forfeit-b (/ (* unclaimed-b burn-amount) balance))
+          (forfeit-a (/ (* unclaimed-a amount) balance))
+          (forfeit-b (/ (* unclaimed-b amount) balance))
           (redistributed-a (if (> other-lp u0)
                         (/ (* forfeit-a PRECISION) other-lp)
                         u0))
@@ -205,22 +213,23 @@
               (new-global-b (var-get global-index-b))
               (preserve-a (- unclaimed-a forfeit-a))
               (preserve-b (- unclaimed-b forfeit-b))
-              (preserve-idx-a (if (and (> remaining-lp u0) (> preserve-a u0))
-                          (- new-global-a (/ (* preserve-a PRECISION) remaining-lp))
+              (preserve-idx-a (if (and (> new-balance u0) (> preserve-a u0))
+                          (- new-global-a (/ (* preserve-a PRECISION) new-balance))
                           new-global-a))
-              (preserve-idx-b (if (and (> remaining-lp u0) (> preserve-b u0))
-                          (- new-global-b (/ (* preserve-b PRECISION) remaining-lp))
+              (preserve-idx-b (if (and (> new-balance u0) (> preserve-b u0))
+                          (- new-global-b (/ (* preserve-b PRECISION) new-balance))
                           new-global-b))
             )
-              (if (> remaining-lp u0)
+              (if (> new-balance u0)
                 (map-set user-rewards
                   { account: user }
-                  { balance-lp: remaining-lp,
-                    block-lp: block,
-                    index-a: preserve-idx-a,
-                    index-b: preserve-idx-b,
+                  { balance: new-balance,
+                    block: block,
                     debt-a: u0,
-                    debt-b: u0 })
+                    debt-b: u0, 
+                    index-a: preserve-idx-a,
+                    index-b: preserve-idx-b
+                  })
                 true)
             )
           )
@@ -232,7 +241,6 @@
   )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (update-emission-rewards)
   (let (
       (current-epoch (unwrap-panic (contract-call? .street get-current-epoch)))
@@ -251,33 +259,29 @@
       (var-set total-distributed-b new-rewards)
       (var-set global-index-b new-index)
       (var-set last-mint-epoch current-epoch)
-      (ok {
-        emitted-amount: EMISSION_AMOUNT,
-        global-index-b: new-index
-      })
+      (ok true)
     )
   )
 )
 
-;; #[allow(unchecked_data)]
-(define-public (update-provide-rewards (user principal) (provide-amount uint))
+(define-public (update-provide-rewards (user principal) (amount uint))
   (let (
     (balance (unwrap-panic (contract-call? .credit get-balance user)))
+    (block stacks-block-height)
     (global-a (var-get global-index-a))
     (global-b (var-get global-index-b))
-    (block stacks-block-height)
     (info (map-get? user-rewards { account: user }))
-    (old-balance (- balance provide-amount))
+    (old-balance (- balance amount))
   )
     (begin
       (asserts! (is-eq contract-caller .exchange) ERR_NOT_AUTHORIZED)
       (if (is-some info)
         (let (
           (data (unwrap-panic info))
-          (index-a (get index-a data))
-          (index-b (get index-b data))
           (debt-a (get debt-a data))
           (debt-b (get debt-b data))
+          (index-a (get index-a data))
+          (index-b (get index-b data))
           (earned-a (/ (* old-balance (- global-a index-a)) PRECISION))
           (earned-b (/ (* old-balance (- global-b index-b)) PRECISION))
           (new-earned-a (/ (* balance (- global-a index-a)) PRECISION))
@@ -288,173 +292,93 @@
           (preserve-debt-b (if (> new-earned-b unclaimed-b) (- new-earned-b unclaimed-b) u0))
         )
           (map-set user-rewards { account: user } {
-            balance-lp: balance,
-            block-lp: block,
+            balance: balance,
+            block: block,
             debt-a: preserve-debt-a,
             debt-b: preserve-debt-b,
             index-a: index-a,
             index-b: index-b
           })
         )
-        (let (
-          (initial-debt-a (/ (* balance global-a) PRECISION))
-          (initial-debt-b (/ (* balance global-b) PRECISION))
-        )
-          (map-set user-rewards { account: user } {
-            balance-lp: balance,
-            block-lp: block,
-            debt-a: initial-debt-a,
-            debt-b: initial-debt-b,
-            index-a: global-a,
-            index-b: global-b
-          })
-        )
+        (map-set user-rewards { account: user } {
+          balance: balance,
+          block: block,
+          debt-a: u0,
+          debt-b: u0,
+          index-a: global-a,
+          index-b: global-b
+        })
       )
       (ok true)
     )
   )
 )
 
-;; #[allow(unchecked_data)]
-(define-public (update-recipient-rewards (recipient principal) (transfer-amount uint))
-  (let (
-    (current-global-a (var-get global-index-a))
-    (current-global-b (var-get global-index-b))
-    (block stacks-block-height)
-    (balance (unwrap-panic (contract-call? .credit get-balance recipient)))
-    (info (map-get? user-rewards { account: recipient }))
-  )
-    (begin
-      (asserts! (is-eq contract-caller .controller) ERR_NOT_AUTHORIZED)
-      (asserts! (> transfer-amount u0) ERR_ZERO_AMOUNT)
-      (if (is-some info)
-        (let (
-          (data (unwrap-panic info))
-          (old-balance (- balance transfer-amount))
-          (index-a (get index-a data))
-          (index-b (get index-b data))
-          (debt-a (get debt-a data))
-          (debt-b (get debt-b data))
-          (earned-a (/ (* old-balance (- current-global-a index-a)) PRECISION))
-          (earned-b (/ (* old-balance (- current-global-b index-b)) PRECISION))
-          (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
-          (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
-          (preserve-idx-a (if (> unclaimed-a u0)
-                            (- current-global-a (/ (* unclaimed-a PRECISION) balance))
-                            current-global-a))
-          (preserve-idx-b (if (> unclaimed-b u0)
-                            (- current-global-b (/ (* unclaimed-b PRECISION) balance))
-                            current-global-b))
-        )
-          (begin
-            (map-set user-rewards { account: recipient } {
-              balance-lp: balance,
-              block-lp: block,
-              debt-a: u0,
-              debt-b: u0,
-              index-a: preserve-idx-a,
-              index-b: preserve-idx-b
-            })
-            (ok true)
-          )
-        )
-        (begin
-          (map-set user-rewards { account: recipient } {
-            balance-lp: balance,
-            block-lp: block,
-            debt-a: u0,
-            debt-b: u0,
-            index-a: current-global-a,
-            index-b: current-global-b
-          })
-          (ok true)
-        )
-      )
-    )
-  )
-)
-
-;; #[allow(unchecked_data)]
-(define-public (update-remove-rewards (user principal) (remove-amount uint))
+(define-public (update-remove-rewards (user principal) (amount uint))
   (let (
     (balance (unwrap-panic (contract-call? .credit get-balance user)))
+    (block stacks-block-height)
     (global-a (var-get global-index-a))
     (global-b (var-get global-index-b))
-    (block stacks-block-height)
     (info (map-get? user-rewards { account: user }))
     (total-lp (unwrap-panic (contract-call? .credit get-total-supply)))
-    (old-balance (+ balance remove-amount))
-    (remaining-lp balance)
+    (old-balance (+ balance amount))
     (other-lp (- total-lp old-balance))
   )
     (begin
       (asserts! (is-eq contract-caller .exchange) ERR_NOT_AUTHORIZED)
-      (if (is-some info)
-        (let (
-          (data (unwrap-panic info))
-          (index-a (get index-a data))
-          (index-b (get index-b data))
-          (debt-a (get debt-a data))
-          (debt-b (get debt-b data))
-          (earned-a (/ (* old-balance (- global-a index-a)) PRECISION))
-          (earned-b (/ (* old-balance (- global-b index-b)) PRECISION))
-          (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
-          (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
-          (forfeit-a (/ (* unclaimed-a remove-amount) old-balance))
-          (forfeit-b (/ (* unclaimed-b remove-amount) old-balance))
-          (redistributed-a (if (> other-lp u0)
-                        (/ (* forfeit-a PRECISION) other-lp)
-                        u0))
-          (redistributed-b (if (> other-lp u0)
-                        (/ (* forfeit-b PRECISION) other-lp)
-                        u0))
-        )
-          (begin
-            (if (> forfeit-a u0)
-              (begin
-                (var-set global-index-a (+ global-a redistributed-a)))
-              true)
-            (if (> forfeit-b u0)
-              (begin
-                (var-set global-index-b (+ global-b redistributed-b)))
-              true)
-            (let (
-              (new-global-a (var-get global-index-a))
-              (new-global-b (var-get global-index-b))
-              (preserve-a (- unclaimed-a forfeit-a))
-              (preserve-b (- unclaimed-b forfeit-b))
-              (preserve-idx-a (if (and (> remaining-lp u0) (> preserve-a u0))
-                          (- new-global-a (/ (* preserve-a PRECISION) remaining-lp))
-                          new-global-a))
-              (preserve-idx-b (if (and (> remaining-lp u0) (> preserve-b u0))
-                          (- new-global-b (/ (* preserve-b PRECISION) remaining-lp))
-                          new-global-b))
-            )
-              (if (> remaining-lp u0)
-                (map-set user-rewards
-                  { account: user }
-                  { balance-lp: remaining-lp,
-                    block-lp: block,
-                    index-a: preserve-idx-a,
-                    index-b: preserve-idx-b,
-                    debt-a: u0,
-                    debt-b: u0 })
-                true)
-            )
+      (let (
+        (data (unwrap-panic info))
+        (index-a (get index-a data))
+        (index-b (get index-b data))
+        (debt-a (get debt-a data))
+        (debt-b (get debt-b data))
+        (earned-a (/ (* old-balance (- global-a index-a)) PRECISION))
+        (earned-b (/ (* old-balance (- global-b index-b)) PRECISION))
+        (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
+        (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
+        (forfeit-a (/ (* unclaimed-a amount) old-balance))
+        (forfeit-b (/ (* unclaimed-b amount) old-balance))
+        (redistributed-a (if (> other-lp u0)
+                      (/ (* forfeit-a PRECISION) other-lp)
+                      u0))
+        (redistributed-b (if (> other-lp u0)
+                      (/ (* forfeit-b PRECISION) other-lp)
+                      u0))
+      )
+        (begin
+          (if (> forfeit-a u0)
+            (begin
+              (var-set global-index-a (+ global-a redistributed-a)))
+            true)
+          (if (> forfeit-b u0)
+            (begin
+              (var-set global-index-b (+ global-b redistributed-b)))
+            true)
+          (let (
+            (new-global-a (var-get global-index-a))
+            (new-global-b (var-get global-index-b))
+            (preserve-a (- unclaimed-a forfeit-a))
+            (preserve-b (- unclaimed-b forfeit-b))
+            (preserve-idx-a (if (and (> balance u0) (> preserve-a u0))
+                        (- new-global-a (/ (* preserve-a PRECISION) balance))
+                        new-global-a))
+            (preserve-idx-b (if (and (> balance u0) (> preserve-b u0))
+                        (- new-global-b (/ (* preserve-b PRECISION) balance))
+                        new-global-b))
           )
-        )
-        (let (
-          (initial-debt-a (/ (* remaining-lp global-a) PRECISION))
-          (initial-debt-b (/ (* remaining-lp global-b) PRECISION))
-        )
-          (map-set user-rewards { account: user } {
-            balance-lp: remaining-lp,
-            block-lp: block,
-            debt-a: initial-debt-a,
-            debt-b: initial-debt-b,
-            index-a: global-a,
-            index-b: global-b
-          })
+            (if (> balance u0)
+              (map-set user-rewards
+                { account: user }
+                { balance: balance,
+                  block: block,
+                  debt-a: u0,
+                  debt-b: u0,
+                  index-a: preserve-idx-a,
+                  index-b: preserve-idx-b
+                })
+              true)
+          )
         )
       )
       (ok true)
@@ -462,7 +386,6 @@
   )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (update-rewards-a (amount uint))
   (let (
       (current-index (var-get global-index-a))
@@ -483,7 +406,6 @@
   )
 )
 
-;; #[allow(unchecked_data)]
 (define-public (update-rewards-b (amount uint))
   (let (
       (current-index (var-get global-index-b))
@@ -504,22 +426,79 @@
   )
 )
 
-;; #[allow(unchecked_data)]
-(define-public (update-sender-rewards (sender principal) (transfer-amount uint))
+;; controller functions
+(define-public (update-transfer-recipient (recipient principal) (amount uint))
+  (let (
+    (balance (unwrap-panic (contract-call? .credit get-balance recipient)))
+    (block stacks-block-height)
+    (current-global-a (var-get global-index-a))
+    (current-global-b (var-get global-index-b))
+    (info (map-get? user-rewards { account: recipient }))
+  )
+    (begin
+      (asserts! (is-eq contract-caller .controller) ERR_NOT_AUTHORIZED)
+      (asserts! (> amount u0) ERR_ZERO_AMOUNT)
+      (if (is-some info)
+        (let (
+          (data (unwrap-panic info))
+          (old-balance (- balance amount))
+          (debt-a (get debt-a data))
+          (debt-b (get debt-b data))
+          (index-a (get index-a data))
+          (index-b (get index-b data))
+          (earned-a (/ (* old-balance (- current-global-a index-a)) PRECISION))
+          (earned-b (/ (* old-balance (- current-global-b index-b)) PRECISION))
+          (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
+          (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
+          (preserve-idx-a (if (> unclaimed-a u0)
+                            (- current-global-a (/ (* unclaimed-a PRECISION) balance))
+                            current-global-a))
+          (preserve-idx-b (if (> unclaimed-b u0)
+                            (- current-global-b (/ (* unclaimed-b PRECISION) balance))
+                            current-global-b))
+        )
+          (begin
+            (map-set user-rewards { account: recipient } {
+              balance: balance,
+              block: block,
+              debt-a: u0,
+              debt-b: u0,
+              index-a: preserve-idx-a,
+              index-b: preserve-idx-b
+            })
+            (ok true)
+          )
+        )
+        (begin
+          (map-set user-rewards { account: recipient } {
+            balance: balance,
+            block: block,
+            debt-a: u0,
+            debt-b: u0,
+            index-a: current-global-a,
+            index-b: current-global-b
+          })
+          (ok true)
+        )
+      )
+    )
+  )
+)
+
+(define-public (update-transfer-sender (sender principal) (amount uint))
   (let (
     (balance (unwrap-panic (contract-call? .credit get-balance sender)))
+    (block stacks-block-height)
     (global-a (var-get global-index-a))
     (global-b (var-get global-index-b))
-    (block stacks-block-height)
     (info (unwrap! (map-get? user-rewards { account: sender }) ERR_NOT_AUTHORIZED))
     (total-lp (unwrap-panic (contract-call? .credit get-total-supply)))
-    (old-balance (+ balance transfer-amount))
-    (remaining-lp balance)
+    (old-balance (+ balance amount))
     (other-lp (- total-lp old-balance))
   )
     (begin
       (asserts! (is-eq contract-caller .controller) ERR_NOT_AUTHORIZED)
-      (asserts! (> transfer-amount u0) ERR_ZERO_AMOUNT)
+      (asserts! (> amount u0) ERR_ZERO_AMOUNT)
       (let (
         (index-a (get index-a info))
         (index-b (get index-b info))
@@ -529,8 +508,8 @@
         (earned-b (/ (* old-balance (- global-b index-b)) PRECISION))
         (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
         (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
-        (forfeit-a (/ (* unclaimed-a transfer-amount) old-balance))
-        (forfeit-b (/ (* unclaimed-b transfer-amount) old-balance))
+        (forfeit-a (/ (* unclaimed-a amount) old-balance))
+        (forfeit-b (/ (* unclaimed-b amount) old-balance))
         (redistributed-a (if (> other-lp u0)
                       (/ (* forfeit-a PRECISION) other-lp)
                       u0))
@@ -553,17 +532,17 @@
             (new-global-b (var-get global-index-b))
             (preserve-a (- unclaimed-a forfeit-a))
             (preserve-b (- unclaimed-b forfeit-b))
-            (preserve-idx-a (if (and (> remaining-lp u0) (> preserve-a u0))
-                        (- new-global-a (/ (* preserve-a PRECISION) remaining-lp))
+            (preserve-idx-a (if (and (> balance u0) (> preserve-a u0))
+                        (- new-global-a (/ (* preserve-a PRECISION) balance))
                         new-global-a))
-            (preserve-idx-b (if (and (> remaining-lp u0) (> preserve-b u0))
-                        (- new-global-b (/ (* preserve-b PRECISION) remaining-lp))
+            (preserve-idx-b (if (and (> balance u0) (> preserve-b u0))
+                        (- new-global-b (/ (* preserve-b PRECISION) balance))
                         new-global-b))
           )
-            (if (> remaining-lp u0)
+            (if (> balance u0)
               (map-set user-rewards { account: sender } {
-                balance-lp: remaining-lp,
-                block-lp: block,
+                balance: balance,
+                block: block,
                 debt-a: u0,
                 debt-b: u0,
                 index-a: preserve-idx-a,
@@ -578,35 +557,18 @@
   )
 )
 
-;; #[allow(unchecked_data)]
-(define-public (transformer
-    (token <sip-010>)
-    (amount uint)
-    (recipient principal)
-  )
-  (as-contract (contract-call? token transfer amount tx-sender recipient none))
-)
-
-(define-public (set-contract-owner (new-owner principal))
-  (begin
-    (asserts! (is-eq contract-caller (var-get contract-owner)) ERR_NOT_CONTRACT_OWNER)
-    (asserts! (not (is-eq new-owner (var-get contract-owner))) ERR_INVALID_PRINCIPAL)
-    (var-set contract-owner new-owner)
-    (ok true)
-  )
-)
-
+;; custom read only
 (define-read-only (get-cleanup-rewards)
   (let (
     (actual-a (unwrap-panic (contract-call? .welshcorgicoin get-balance .rewards)))
     (actual-b (unwrap-panic (contract-call? .street get-balance .rewards)))
-    (distributed-a (var-get total-distributed-a))
-    (distributed-b (var-get total-distributed-b))
     (claimed-a (var-get total-claimed-a))
     (claimed-b (var-get total-claimed-b))
+    (distributed-a (var-get total-distributed-a))
+    (distributed-b (var-get total-distributed-b))
+    (dust-threshold u10000)
     (outstanding-a (- distributed-a claimed-a))
     (outstanding-b (- distributed-b claimed-b))
-    (dust-threshold u10000)
     (cleanup-a (if (> actual-a outstanding-a)
                     (- actual-a outstanding-a)
                     (if (and (is-eq actual-a outstanding-a)
@@ -625,12 +587,12 @@
       actual-b: actual-b,
       claimed-a: claimed-a,
       claimed-b: claimed-b,
+      cleanup-a: cleanup-a,
+      cleanup-b: cleanup-b,
       distributed-a: distributed-a,
       distributed-b: distributed-b,
       outstanding-a: outstanding-a,
-      outstanding-b: outstanding-b,
-      cleanup-a: cleanup-a,
-      cleanup-b: cleanup-b
+      outstanding-b: outstanding-b
     })
   )
 )
@@ -649,10 +611,10 @@
 
 (define-read-only (get-reward-user-info (user principal))
   (let (
-    (balance-lp (unwrap-panic (contract-call? .credit get-balance user)))
+    (balance (unwrap-panic (contract-call? .credit get-balance user)))
     (info (default-to {
-      balance-lp: u0,
-      block-lp: u0,
+      balance: u0,
+      block: u0,
       debt-a: u0,
       debt-b: u0,
       index-a: u0,
@@ -660,26 +622,24 @@
       (map-get? user-rewards { account: user })))
     (current-global-a (var-get global-index-a))
     (current-global-b (var-get global-index-b))
+    (debt-a (get debt-a info))
+    (debt-b (get debt-b info))
     (user-index-a (get index-a info))
     (user-index-b (get index-b info))
-    (earned-a (/ (* balance-lp (- current-global-a user-index-a)) PRECISION))
-    (earned-b (/ (* balance-lp (- current-global-b user-index-b)) PRECISION))
-    (deb-a (get debt-a info))
-    (deb-b (get debt-b info))
-    (unclaimed-a (if (> earned-a deb-a) (- earned-a deb-a) u0))
-    (unclaimed-b (if (> earned-b deb-b) (- earned-b deb-b) u0))
+    (earned-a (/ (* balance (- current-global-a user-index-a)) PRECISION))
+    (earned-b (/ (* balance (- current-global-b user-index-b)) PRECISION))
+    (unclaimed-a (if (> earned-a debt-a) (- earned-a debt-a) u0))
+    (unclaimed-b (if (> earned-b debt-b) (- earned-b debt-b) u0))
   )
     (ok {
-      balance-lp: balance-lp,
-      block-lp: (get block-lp info),
-      debt-a: deb-a,
-      debt-b: deb-b,
-      earned-a: earned-a,
-      earned-b: earned-b,
+      balance: balance,
+      block: (get block info),
+      debt-a: debt-a,
+      debt-b: debt-b,
       index-a: user-index-a,
       index-b: user-index-b,
       unclaimed-a: unclaimed-a,
-      unclaimed-b: unclaimed-b,
+      unclaimed-b: unclaimed-b
     })
   )
 )

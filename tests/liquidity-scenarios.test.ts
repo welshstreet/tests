@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
 import { setupInitialLiquidity } from "./functions/setup-helper-functions";
-import { disp, DECIMALS, TOTAL_SUPPLY_WELSH } from "./vitestconfig"
+import { disp, FEE_BASIS, DECIMALS, TAX, PROVIDE_WELSH, TOTAL_SUPPLY_WELSH } from "./vitestconfig"
 import { getExchangeInfo, provideLiquidity, provideInitialLiquidity, removeLiquidity } from "./functions/exchange-helper-functions";
 import { getBalance } from "./functions/shared-read-only-helper-functions";
 
@@ -23,8 +23,8 @@ describe("=== LIQUIDITY SCENARIOS ===", () => {
         // Contract calculations for remove-liquidity
         const removeAmountA = Math.floor((amountLpToRemove * availA) / totalSupplyLp);
         const removeAmountB = Math.floor((amountLpToRemove * availB) / totalSupplyLp);
-        const taxA = Math.floor((removeAmountA * 100) / 10000); // tax = 100, BASIS = 10000
-        const taxB = Math.floor((removeAmountB * 100) / 10000);
+        const taxA = Math.floor((removeAmountA * TAX) / FEE_BASIS); // tax = 100, BASIS = 10000
+        const taxB = Math.floor((removeAmountB * TAX) / FEE_BASIS);
         const userA = removeAmountA - taxA;
         const userB = removeAmountB - taxB;
 
@@ -59,7 +59,7 @@ describe("=== LIQUIDITY SCENARIOS ===", () => {
         const reserveA = state.reserveA;
         const reserveB = state.reserveB;
 
-        const amountAToProvide = 1_000_000_000;  // 1,000 WELSH
+        const amountAToProvide = PROVIDE_WELSH
         const addedAExpected = amountAToProvide;
         const addedBExpected = Math.floor((amountAToProvide * reserveB) / reserveA);
         const mintedLpExpectedForProvideLiquidity = Math.floor((amountAToProvide * TOTAL_SUPPLY_WELSH) / reserveA);
@@ -75,13 +75,9 @@ describe("=== LIQUIDITY SCENARIOS ===", () => {
         );
 
         // STEP 5: Deployer tries to provide initial liquidity after providing liquidity failed
-        // For reinitialization, the contract uses proportional calculation based on reserves
-
-        // Contract reinitialization logic:
-        // Calculations to match contract logic
-        const lpFromResA = Math.floor((amountAToProvide * DECIMALS) / reserveA);
-        const lpFromResB = Math.floor((addedBExpected * DECIMALS) / reserveB);
-        const mintedLpExpected = Math.min(lpFromResA, lpFromResB);
+        // After the fix, provide-initial-liquidity always uses geometric mean when total-supply-lp = 0
+        // LP = sqrt(amount-a * amount-b)
+        const mintedLpExpected = Math.floor(Math.sqrt(amountAToProvide * addedBExpected));
 
         provideInitialLiquidity(
             amountAToProvide,

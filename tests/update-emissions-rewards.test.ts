@@ -37,8 +37,6 @@ describe("=== UPDATE EMISSION REWARDS TESTS ===", () => {
         
         // STEP 5: Call update-emission-rewards
         updateEmissionRewards(
-            EMISSION_AMOUNT,
-            expectedGlobalIndexB,
             deployer,
             disp
         );
@@ -68,8 +66,6 @@ describe("=== UPDATE EMISSION REWARDS TESTS ===", () => {
         
         // STEP 4: Try to call update-emission-rewards with unauthorized sender (wallet1)
         updateEmissionRewards(
-            0, // Should fail before calculating
-            0, // Should fail before calculating
             wallet1,
             disp
         );
@@ -100,16 +96,12 @@ describe("=== UPDATE EMISSION REWARDS TESTS ===", () => {
         // STEP 4: Call update-emission-rewards once (success)
         const expectedGlobalIndexB = Math.floor((EMISSION_AMOUNT * PRECISION) / totalSupplyLpExpected);
         updateEmissionRewards(
-            EMISSION_AMOUNT,
-            expectedGlobalIndexB,
             deployer,
             disp
         );
         
         // STEP 5: Try to call update-emission-rewards again without new emission-mint (should fail)
         updateEmissionRewards(
-            0, // Should fail before calculating
-            0, // Should fail before calculating
             deployer,
             disp
         );
