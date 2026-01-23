@@ -341,7 +341,7 @@
   )
 )
 
-(define-public (transformer
+(define-private (transformer
     (token <sip-010>)
     (amount uint)
     (recipient principal)
