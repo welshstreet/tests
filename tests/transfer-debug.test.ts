@@ -3,7 +3,7 @@ import { disp, DONATE_WELSH, DONATE_STREET, PRECISION } from "./vitestconfig";
 import { setupRewards } from "./functions/setup-helper-functions";
 import { getRewardUserInfo, getRewardPoolInfo, claimRewards } from "./functions/rewards-helper-functions";
 import { getBalance } from "./functions/shared-read-only-helper-functions";
-import { transferCredit } from "./functions/controller-helper-functions";
+import { transferCredit } from "./functions/credit-controller-helper-functions";
 
 const accounts = simnet.getAccounts();
 const deployer = accounts.get("deployer")!;

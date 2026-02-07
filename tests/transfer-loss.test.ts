@@ -3,7 +3,7 @@ import { disp, DONATE_WELSH, DONATE_STREET, PRECISION, INITIAL_WELSH, INITIAL_ST
 import { setupInitialLiquidity } from "./functions/setup-helper-functions";
 import { getRewardUserInfo, getRewardPoolInfo, donateRewards, claimRewards } from "./functions/rewards-helper-functions";
 import { getBalance } from "./functions/shared-read-only-helper-functions";
-import { transferCredit } from "./functions/controller-helper-functions";
+import { transferCredit } from "./functions/credit-controller-helper-functions";
 import { transfer } from "./functions/transfer-helper-function";
 import { provideLiquidity, burnLiquidity } from "./functions/exchange-helper-functions";
 

@@ -11,7 +11,7 @@ export const DONATE_WELSH = 100_000_000_000; // 100,000 natural units
 export const DONATE_STREET = DONATE_WELSH * RATIO; // 100,000,000 natural units (1:100 ratio)
 
 export const EMISSION_AMOUNT_KILL_SWITCH_TEST = 1_000_000_000_000_000 // 1 billion natural units
-export const EMISSION_AMOUNT = 10_000_000_000 // 10,000 natural units
+export const EMISSION_AMOUNT = 10_000_000_000 // 
 export const EMISSION_EPOCHS= 10;
 
 export const FEE_BASIS = 10000; // 100% = 10000, 1% = 100, 0.01% = 1
